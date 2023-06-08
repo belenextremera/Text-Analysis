@@ -1,0 +1,347 @@
+---
+title: "Análisis textual"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+date: "2023-06-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Paquetes esenciales para el funcionamiento de R
+```{r}
+library(dplyr)
+library(flextable)
+library(tidyverse)
+library(tidytext)
+library(tidyr)
+```
+
+
+## 1. Cargamos el documento con el formato especificado
+```{r}
+nivelbajo <- read_file("nivelbajopreseea.txt")
+nivelbajo
+
+
+```
+
+
+
+
+## 2. Convertimos el documento en una columna
+```{r}
+nivelbajocolumna = as.data.frame(nivelbajo)
+nivelbajocolumna
+```
+
+
+## 3. Pasamos la columna a una fila por cada palabra
+
+```{r}
+nivelbajolimpio <- nivelbajocolumna %>% 
+    unnest_tokens(nivelbajocolumna, nivelbajo) %>%
+  mutate(user="nivelbajo", Genero=1)
+nivelbajolimpio %>%
+  head
+```
+
+## 4. Cargamos las palabras gramaticales
+
+
+```{r}
+tidytext::get_stopwords(language = "es", source = "snowball")  %>%
+  print(n = 175)
+```
+
+### Guardamos esas palabras en un data frame porque las vamos a usar después 
+```{r}
+my_stopwords <-  tidytext::get_stopwords(language = "es", source = "snowball")
+my_stopwords
+
+```
+
+# dplyr::anti_join -- compares two matching colums with the same name, and removes the elements that match'
+
+## 5. Eliminamos las palabras gramaticales
+
+### 5.1. Para usar antijoin necesitamos que las columnas se llamamen igual
+
+```{r}
+names(nivelbajolimpio)
+names(my_stopwords)
+```
+#### Sobreescribimos e dataframe con el nuevo nombre de columna
+```{r}
+nivelbajolimpio <- 
+nivelbajolimpio %>%
+  rename(palabras=nivelbajocolumna)
+```
+
+
+```{r}
+my_stopwords <- 
+my_stopwords %>%
+  rename(palabras=word)
+```
+
+
+### 5.2. Creamos un nuevo data frame solo con las palabras temáticas
+
+```{r}
+nivelbajopalabrastemáticas <-  anti_join(nivelbajolimpio, my_stopwords)
+nivelbajopalabrastemáticas
+```
+
+
+### Tenemos: nivelbajopalabrastemáticas y nivelbajolimpio todas las palabras en filas
+
+
+## 6. Análisis de frecuencia
+
+###6.1. Todo tipo de palabras
+
+```{r}
+(frecuencias <- count(nivelbajolimpio, palabras))
+```
+
+###6.2. Palabras temáticas
+
+```{r}
+frecuenciastemáticas <- count(nivelbajopalabrastemáticas, palabras) 
+frecuenciastemáticas
+
+
+```
+
+```{r}
+range(frecuenciastemáticas$n)
+
+
+```
+
+
+```{r}
+max(frecuenciastemáticas$n)
+
+
+```
+
+```{r}
+min(frecuenciastemáticas$n)
+```
+#### 6.2.1. Comprobamos la palabra con máxima frecuencia
+
+```{r}
+40 %in% unique(frecuenciastemáticas$n)
+```
+```{r}
+which(frecuenciastemáticas$n == max(frecuenciastemáticas$n))
+```
+
+```{r}
+frecuenciastemáticas[858,1]
+```
+```{r}
+frecuenciastemáticas %>%
+  arrange(desc(n)) 
+```
+```{r}
+top_ten_temáticas <- 
+  frecuenciastemáticas %>%
+  arrange(desc(n)) %>%
+  slice(1:20)
+top_ten_temáticas
+```
+
+```{r}
+anyNA(nivelbajocolumna$text)
+```
+
+```{r}
+top_twenty <- frecuenciastemáticas %>% 
+  arrange(desc(n)) %>%
+  slice(1:20) 
+top_twenty
+```
+
+```{r}
+bottom_ten <- 
+frecuenciastemáticas %>% 
+  arrange((n)) %>%
+  slice(1:30) 
+
+bottom_ten
+```
+
+
+ggplot(aes(x = n, y = reorder(word, n)))
+
+```{r}
+ggpalabrastemáticas <- 
+  top_ten_temáticas %>%
+  ggplot(aes(x = n, y = reorder(palabras, n))) +
+  ggtitle("20 palabras temáticas más frecuentes en el nivel bajo") +
+  labs(x = "Frecuencia", y = "Palabras", hjust = 1.5) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_col(fill = "red") +
+  geom_text(aes(label = n), hjust = 1.2) + theme_bw()
+
+ggpalabrastemáticas
+```
+
+
+```{r}
+top_twenty_plot <- 
+  top_twenty %>%
+  ggplot(aes(x = n, y = reorder(palabras, n))) +
+  ggtitle("20 palabras más frecuentes en el nivel bajo") +
+  labs(x = "Frecuencia", y = "Palabras", hjust = 1.5) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_col(fill = "red") +
+  geom_text(aes(label = n), hjust = 1.2) + theme_bw()
+ggsave("TOP20.png")
+top_twenty_plot
+```
+```{r}
+library(tokenizers)
+```
+
+
+## 7. Palabras totales
+
+```{r}
+palabrastextos <- tokenize_words(nivelbajo)
+palabrastextos
+```
+
+```{r}
+palabrastotales <- length(palabrastextos[[1]])
+palabrastotales
+```
+
+```{r}
+tabla <- table(palabrastextos[[1]])
+tabla <- data_frame(word = names(tabla), count = as.numeric(tabla))
+tabla <- arrange(tabla, desc(count))
+tabla
+
+```
+
+### 7.1.1. Método lapply
+```{r}
+nivelbajolimpio %>%
+mutate(wordcount = lapply(palabras, function(x) {length(x)}) %>% unlist) %>%
+  summarise(sum(wordcount))
+```
+
+```{r}
+nivelbajopalabrastemáticas %>%
+mutate(wordcount = lapply(palabras, function(x) {length(x)}) %>% unlist) %>%
+  summarise(sum(wordcount))
+```
+
+
+## 7.1 Vocablos totales 
+```{r}
+ nivelbajolimpio %>%
+  select(palabras) %>%
+  unique %>%
+  summarise(count=n())
+```
+
+### 7.1. Palabras en total
+
+```{r}
+count(frecuencias)
+```
+```{r}
+count(frecuenciastemáticas)
+```
+
+
+
+```{r}
+library(syuzhet)
+library(RColorBrewer)
+library(wordcloud)
+library(tm)
+```
+
+## 8. Análisis cualitativo
+
+
+```{r}
+oraciones <- tokenize_sentences(nivelbajo)
+oraciones
+```
+
+
+```{r}
+texto_palabras <- get_tokens(nivelbajo)
+texto_palabras
+```
+
+
+```{r}
+sentimientos <- get_nrc_sentiment(nivelbajopalabrastemáticas$palabras, lang = "spanish") 
+sentimientos
+
+```
+
+```{r}
+write.csv(sentimientos, "sentimientos.csv")
+```
+
+**Unimos los dos**
+
+
+```{r}
+Analisissentimientos <- cbind (nivelbajopalabrastemáticas, sentimientos) %>%
+  unique
+Analisissentimientos
+```
+
+```{r}
+Analisissentimientos %>%
+  rowwise() %>%
+  mutate(max=max(anger, anticipation, disgust, fear, joy, sadness, surprise, trust, negative, positive)) %>%
+  select(-user,-Genero) %>%
+  filter(max >= 1) %>%
+  flextable %>%
+  autofit
+  #filter_all(any_vars(.%in%c(3))) 
+```
+
+```{r}
+Analisissentimientos %>%
+  rowwise() %>%
+  mutate(max=max(anger, anticipation, disgust, fear, joy, sadness, surprise, trust, negative, positive)) %>%
+  select(-user,-Genero) %>%
+  filter(max >= 3) %>%
+  flextable %>%
+  autofit
+  #filter_all(any_vars(.%in%c(3))) 
+```
+
+
+```{r}
+Analisissentimientos %>%
+  select(sadness, palabras, user, Genero)
+
+```
+
+
+```{r}
+write_excel_csv(Analisissentimientos, "analisissentimientos.csv", delim = ";")
+```
+
+
+
+
+
+

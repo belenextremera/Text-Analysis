@@ -24,8 +24,8 @@ library(tidyr)
 
 ## 1. Cargamos el documento con el formato especificado
 ```{r}
-nivelbajo <- read_file("nivelbajopreseea.txt")
-nivelbajo
+texto <- read_file("nivelbajopreseea.txt")
+texto
 
 
 ```
@@ -35,18 +35,18 @@ nivelbajo
 
 ## 2. Convertimos el documento en una columna
 ```{r}
-nivelbajocolumna = as.data.frame(nivelbajo)
-nivelbajocolumna
+textocolumna = as.data.frame(texto)
+textocolumna
 ```
 
 
 ## 3. Pasamos la columna a una fila por cada palabra
 
 ```{r}
-nivelbajolimpio <- nivelbajocolumna %>% 
-    unnest_tokens(nivelbajocolumna, nivelbajo) %>%
-  mutate(user="nivelbajo", Genero=1)
-nivelbajolimpio %>%
+textolimpio <- textocolumna %>% 
+    unnest_tokens(textocolumna, texto) %>%
+  mutate(user="texto", Genero=1)
+textolimpio %>%
   head
 ```
 
@@ -72,14 +72,14 @@ my_stopwords
 ### 5.1. Para usar antijoin necesitamos que las columnas se llamamen igual
 
 ```{r}
-names(nivelbajolimpio)
+names(textolimpio)
 names(my_stopwords)
 ```
 #### Sobreescribimos e dataframe con el nuevo nombre de columna
 ```{r}
-nivelbajolimpio <- 
-nivelbajolimpio %>%
-  rename(palabras=nivelbajocolumna)
+textolimpio <- 
+textolimpio %>%
+  rename(palabras=textocolumna)
 ```
 
 
@@ -93,12 +93,12 @@ my_stopwords %>%
 ### 5.2. Creamos un nuevo data frame solo con las palabras temáticas
 
 ```{r}
-nivelbajopalabrastemáticas <-  anti_join(nivelbajolimpio, my_stopwords)
-nivelbajopalabrastemáticas
+textopalabrastemáticas <-  anti_join(textolimpio, my_stopwords)
+textopalabrastemáticas
 ```
 
 
-### Tenemos: nivelbajopalabrastemáticas y nivelbajolimpio todas las palabras en filas
+### Tenemos: textopalabrastemáticas y textolimpio todas las palabras en filas
 
 
 ## 6. Análisis de frecuencia
@@ -106,13 +106,13 @@ nivelbajopalabrastemáticas
 ###6.1. Todo tipo de palabras
 
 ```{r}
-(frecuencias <- count(nivelbajolimpio, palabras))
+(frecuencias <- count(textolimpio, palabras))
 ```
 
 ###6.2. Palabras temáticas
 
 ```{r}
-frecuenciastemáticas <- count(nivelbajopalabrastemáticas, palabras) 
+frecuenciastemáticas <- count(textopalabrastemáticas, palabras) 
 frecuenciastemáticas
 
 
@@ -154,12 +154,12 @@ frecuenciastemáticas %>%
 top_ten_temáticas <- 
   frecuenciastemáticas %>%
   arrange(desc(n)) %>%
-  slice(1:20)
+  slice(1:10)
 top_ten_temáticas
 ```
 
 ```{r}
-anyNA(nivelbajocolumna$text)
+anyNA(textocolumna$text)
 ```
 
 ```{r}
@@ -185,7 +185,7 @@ ggplot(aes(x = n, y = reorder(word, n)))
 ggpalabrastemáticas <- 
   top_ten_temáticas %>%
   ggplot(aes(x = n, y = reorder(palabras, n))) +
-  ggtitle("20 palabras temáticas más frecuentes en el nivel bajo") +
+  ggtitle("10 palabras temáticas más frecuentes") +
   labs(x = "Frecuencia", y = "Palabras", hjust = 1.5) +
   theme(plot.title = element_text(hjust = 0.5)) +
   geom_col(fill = "red") +
@@ -215,7 +215,7 @@ library(tokenizers)
 ## 7. Palabras totales
 
 ```{r}
-palabrastextos <- tokenize_words(nivelbajo)
+palabrastextos <- tokenize_words(texto)
 palabrastextos
 ```
 
@@ -234,13 +234,13 @@ tabla
 
 ### 7.1.1. Método lapply
 ```{r}
-nivelbajolimpio %>%
+textolimpio %>%
 mutate(wordcount = lapply(palabras, function(x) {length(x)}) %>% unlist) %>%
   summarise(sum(wordcount))
 ```
 
 ```{r}
-nivelbajopalabrastemáticas %>%
+textopalabrastemáticas %>%
 mutate(wordcount = lapply(palabras, function(x) {length(x)}) %>% unlist) %>%
   summarise(sum(wordcount))
 ```
@@ -248,7 +248,7 @@ mutate(wordcount = lapply(palabras, function(x) {length(x)}) %>% unlist) %>%
 
 ## 7.1 Vocablos totales 
 ```{r}
- nivelbajolimpio %>%
+ textolimpio %>%
   select(palabras) %>%
   unique %>%
   summarise(count=n())
@@ -276,19 +276,19 @@ library(tm)
 
 
 ```{r}
-oraciones <- tokenize_sentences(nivelbajo)
+oraciones <- tokenize_sentences(texto)
 oraciones
 ```
 
 
 ```{r}
-texto_palabras <- get_tokens(nivelbajo)
+texto_palabras <- get_tokens(texto)
 texto_palabras
 ```
 
 
 ```{r}
-sentimientos <- get_nrc_sentiment(nivelbajopalabrastemáticas$palabras, lang = "spanish") 
+sentimientos <- get_nrc_sentiment(textopalabrastemáticas$palabras, lang = "spanish") 
 sentimientos
 
 ```
@@ -301,7 +301,7 @@ write.csv(sentimientos, "sentimientos.csv")
 
 
 ```{r}
-Analisissentimientos <- cbind (nivelbajopalabrastemáticas, sentimientos) %>%
+Analisissentimientos <- cbind (textopalabrastemáticas, sentimientos) %>%
   unique
 Analisissentimientos
 ```

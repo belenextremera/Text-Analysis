@@ -24,7 +24,7 @@ library(tidyr)
 
 ## 1. Cargamos el documento con el formato especificado
 ```{r}
-texto <- read_file("nivelbajopreseea.txt")
+texto <- read_file("nombre.txt")
 texto
 
 

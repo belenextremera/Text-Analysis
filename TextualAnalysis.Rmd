@@ -286,6 +286,7 @@ texto_palabras <- get_tokens(texto)
 texto_palabras
 ```
 
+### 8.1. Análisis de sentimientos
 
 ```{r}
 sentimientos <- get_nrc_sentiment(textopalabrastemáticas$palabras, lang = "spanish") 
@@ -328,6 +329,52 @@ Analisissentimientos %>%
   #filter_all(any_vars(.%in%c(3))) 
 ```
 
+### 8.1.1. Filtrado
+
+
+```{r}
+
+Sentimientosmasdeuno <- 
+Analisissentimientos %>%
+  rowwise() %>%
+  mutate(max=max(anger, anticipation, disgust, fear, joy, sadness, surprise, trust, negative, positive)) %>%
+  select(-user,-Genero) %>%
+  filter(max >= 1)
+  #filter_all(any_vars(.%in%c(3))) 
+Sentimientosmasdeuno
+```
+
+
+```{r}
+
+Sentimientosmasdetres <- 
+Analisissentimientos %>%
+  rowwise() %>%
+  mutate(max=max(anger, anticipation, disgust, fear, joy, sadness, surprise, trust, negative, positive)) %>%
+  select(-user,-Genero) %>%
+  filter(max >= 3)
+  #flextable %>%
+  #autofit
+  #filter_all(any_vars(.%in%c(3))) 
+Sentimientosmasdetres
+```
+
+#### 8.1.1.1. Representación visual
+
+```{r}
+GGSentimientosmasdetres <- 
+  Sentimientosmasdetres %>%
+  ggplot(aes(x = max, y= words)) +
+  ggtitle("Palabras con mayor calificación de sentimientos") +
+  labs(x = "Calificación máxima de sentimientos", y = "Palabras", hjust = 1.5) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_bar(stat = "identity") +
+  geom_col(fill = "red") +
+  geom_text(aes(label = max), hjust = 1.2) + theme_bw()
+GGSentimientosmasdetres
+ggsave("GGSentimientosmasdetres.png")
+
+```
 
 ```{r}
 Analisissentimientos %>%
